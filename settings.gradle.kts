@@ -25,3 +25,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Android Net"
 include(":app")
+include(":lib_net")
