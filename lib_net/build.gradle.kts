@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlinx.serialization)
 }
 
 android {
@@ -35,4 +36,13 @@ android {
 }
 
 dependencies {
+    // retrofit
+    implementation(libs.retrofit)
+    // 日志拦截器
+    implementation(libs.logging.interceptor)
+    // 实体类转换器
+    implementation(libs.converter.kotlinx.serialization)
+    implementation(libs.kotlinx.serialization.json)
+    // 协程
+    implementation(libs.kotlinx.coroutines.core)
 }
