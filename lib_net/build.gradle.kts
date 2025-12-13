@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlinx.serialization)
+    id("maven-publish")
 }
 
 android {
@@ -35,6 +36,13 @@ android {
             jvmTarget = JvmTarget.JVM_1_8
         }
     }
+
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+            withJavadocJar()
+        }
+    }
 }
 
 dependencies {
@@ -47,4 +55,19 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     // 协程
     implementation(libs.kotlinx.coroutines.core)
+}
+
+// 发布maven脚本
+publishing {
+    publications {
+        create<MavenPublication>("release") {
+            groupId = "com.che2n3jigw"
+            artifactId = "lib_net"
+            version = "1.0.0"
+
+            afterEvaluate {
+                from(components.getByName("release"))
+            }
+        }
+    }
 }
