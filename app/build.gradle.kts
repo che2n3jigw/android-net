@@ -44,9 +44,12 @@ android {
 }
 
 dependencies {
-    implementation(project(":lib_net"))
+    // 自定义retrofit封装库
+    implementation(libs.android.net)
+    // implementation(project(":lib_net"))
+    // 协程
     implementation(libs.kotlinx.coroutines.core)
-
+    // retrofit
     implementation(libs.retrofit)
     // 实体类转换器
     implementation(libs.converter.kotlinx.serialization)

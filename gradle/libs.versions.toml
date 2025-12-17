@@ -9,6 +9,8 @@ kotlinxCoroutinesCore = "1.10.2"
 okhttp = "5.3.2"
 # retrofit 依赖版本
 retrofit = "3.0.0"
+# 自定义retroift封装库依赖版本
+androidNet = "1.0.0"
 
 [libraries]
 converter-kotlinx-serialization = { module = "com.squareup.retrofit2:converter-kotlinx-serialization", version.ref = "retrofit" }
@@ -16,6 +18,7 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 logging-interceptor = { module = "com.squareup.okhttp3:logging-interceptor", version.ref = "okhttp" }
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
+android-net = { module = "com.github.che2n3jigw:android-net", version.ref = "androidNet" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
