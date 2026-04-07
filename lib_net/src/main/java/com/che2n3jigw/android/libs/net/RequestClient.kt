@@ -37,18 +37,30 @@ object RequestClient {
     /**
      * 存储多个Retrofit实例
      */
-    private val mRetrofitMap = ConcurrentHashMap<String, Retrofit>()
+    private val retrofitMap = ConcurrentHashMap<String, Retrofit>()
+
+    /**
+     * 全局共享的 OkHttpClient 基础实例
+     * 共享连接池和线程池，提升性能并减少资源消耗。
+     */
+    private val baseClient by lazy {
+        OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+    }
 
     /**
      * OkHttp日志拦截器
      */
-    private val mLogging by lazy {
+    private val logging by lazy {
         HttpLoggingInterceptor().apply {
             setLevel(HttpLoggingInterceptor.Level.BODY)
         }
     }
 
-    private val mJsonFactory by lazy {
+    private val jsonFactory by lazy {
         val json = Json {
             // 忽略未定义的key
             ignoreUnknownKeys = true
@@ -61,76 +73,73 @@ object RequestClient {
      */
     private fun createRetrofit(
         baseUrl: String,
-        connectTimeout: Long = 30_000,
-        readTimeout: Long = 30_000,
-        writeTimeout: Long = 30_000,
-        enableLogging: Boolean = true,
-        converters: List<Converter.Factory> = emptyList(),
-        interceptors: List<Interceptor> = emptyList()
+        connectTimeout: Long,
+        readTimeout: Long,
+        writeTimeout: Long,
+        enableLogging: Boolean,
+        converters: List<Converter.Factory>,
+        interceptors: List<Interceptor>
     ): Retrofit {
-        val builder = Retrofit.Builder().apply {
-            // 域名
+        return Retrofit.Builder().apply {
             baseUrl(baseUrl)
-            // OkHttp客户端
-            val okHttpClient = provideOkHttpClient(
-                connectTimeout, readTimeout, writeTimeout, enableLogging, interceptors
+            // 基于基础客户端创建新配置，共享连接池
+            client(
+                provideOkHttpClient(
+                    connectTimeout,
+                    readTimeout,
+                    writeTimeout,
+                    enableLogging,
+                    interceptors
+                )
             )
-            client(okHttpClient)
-            // JSON转换器
-            if (converters.isNotEmpty()) {
-                for (factory in converters) {
-                    addConverterFactory(factory)
-                }
-            }
-            addConverterFactory(mJsonFactory)
-        }
-        return builder.build()
+            // 添加自定义转换器
+            converters.forEach { addConverterFactory(it) }
+            // 默认添加 JSON 转换器
+            addConverterFactory(jsonFactory)
+        }.build()
     }
 
     /**
-     * 提供OkHttp客户端
+     * 提供 OkHttp 客户端
+     * 使用 newBuilder() 确保共享线程池和连接池
      */
     private fun provideOkHttpClient(
         connectTimeout: Long,
         readTimeout: Long,
         writeTimeout: Long,
-        enableLogging: Boolean = true,
-        interceptors: List<Interceptor> = emptyList()
+        enableLogging: Boolean,
+        interceptors: List<Interceptor>
     ): OkHttpClient {
-        val builder = OkHttpClient.Builder().apply {
+        return baseClient.newBuilder().apply {
             connectTimeout(connectTimeout, TimeUnit.MILLISECONDS)
             readTimeout(readTimeout, TimeUnit.MILLISECONDS)
             writeTimeout(writeTimeout, TimeUnit.MILLISECONDS)
             // 添加日志拦截器
             if (enableLogging) {
-                addInterceptor(mLogging)
+                addInterceptor(logging)
             }
-            if (interceptors.isNotEmpty()) {
-                for (interceptor in interceptors) {
-                    addInterceptor(interceptor)
-                }
-            }
-        }
-        return builder.build()
+            interceptors.forEach { addInterceptor(it) }
+        }.build()
     }
 
     /**
      * 获取 Retrofit 实例
+     * @param refresh 是否刷新实例（如果为 true，则丢弃旧实例并重新创建）
      */
     fun getRetrofit(
         baseUrl: String,
-        connectTimeout: Long = 30_000,
-        readTimeout: Long = 30_000,
-        writeTimeout: Long = 30_000,
-        enableLogging: Boolean = true,
-        clearCache: Boolean = false,
-        converters: List<Converter.Factory> = emptyList(),
-        interceptors: List<Interceptor> = emptyList()
+        connectTimeout: Long,
+        readTimeout: Long,
+        writeTimeout: Long,
+        enableLogging: Boolean,
+        refresh: Boolean,
+        converters: List<Converter.Factory>,
+        interceptors: List<Interceptor>
     ): Retrofit {
-        if (clearCache) {
-            mRetrofitMap.remove(baseUrl)
+        if (refresh) {
+            close(baseUrl)
         }
-        return mRetrofitMap.getOrPut(baseUrl) {
+        return retrofitMap.getOrPut(baseUrl) {
             createRetrofit(
                 baseUrl,
                 connectTimeout,
@@ -150,6 +159,7 @@ object RequestClient {
      * @param readTimeout       读取超时时间
      * @param writeTimeout      写入超时时间
      * @param enableLogging     是否启用日志
+     * @param refresh           是否强制刷新客户端实例
      * @param converters        转换器
      * @param interceptors      拦截器
      */
@@ -159,7 +169,7 @@ object RequestClient {
         readTimeout: Long = 30_000,
         writeTimeout: Long = 30_000,
         enableLogging: Boolean = true,
-        clearCache: Boolean = false,
+        refresh: Boolean = false,
         converters: List<Converter.Factory> = emptyList(),
         interceptors: List<Interceptor> = emptyList()
     ): T {
@@ -169,9 +179,17 @@ object RequestClient {
             readTimeout,
             writeTimeout,
             enableLogging,
-            clearCache,
+            refresh,
             converters,
             interceptors
         ).create(T::class.java)
+    }
+
+    /**
+     * 释放指定 [baseUrl] 的 Retrofit 引用
+     * 由于底层共享 OkHttpClient，通常不需要手动调用 shutdown()
+     */
+    fun close(baseUrl: String) {
+        retrofitMap.remove(baseUrl)
     }
 }
