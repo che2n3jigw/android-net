@@ -10,7 +10,7 @@ okhttp = "5.3.2"
 # retrofit 依赖版本
 retrofit = "3.0.0"
 # 自定义retroift封装库依赖版本
-androidNet = "1.0.0"
+androidNet = "1.0.1"
 
 [libraries]
 converter-kotlinx-serialization = { module = "com.squareup.retrofit2:converter-kotlinx-serialization", version.ref = "retrofit" }
